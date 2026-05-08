@@ -38,7 +38,6 @@ If you want live news from GNews, set your API key first:
 
 ```powershell
 $env:GNEWS_API_KEY="your_api_key"
-$env:NEWS_PROVIDER="gnews"
 $env:NEWS_COUNTRY="in"
 ```
 

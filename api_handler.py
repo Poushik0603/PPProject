@@ -3,7 +3,6 @@ api_handler.py – HTTP Client for News Fetcher + Bookmark System
 Part B Requirement: urllib-based HTTP GET (and simulated POST) to a public news API.
 
 API Used: GNews API (https://gnews.io) – free tier available.
-Fallback:  NewsAPI.org is also supported via the PROVIDER constant.
 """
 
 import json
@@ -21,12 +20,9 @@ logger = logging.getLogger(__name__)
 # CONFIGURATION
 # ─────────────────────────────────────────────
 
-# Replace with your own free key from https://gnews.io or https://newsapi.org.
+# Replace with your own free key from https://gnews.io.
 # Environment variables keep the project portable across machines.
-API_KEY = os.getenv("GNEWS_API_KEY", os.getenv("NEWS_API_KEY", "579f5af84cb94a4dbd2e2d12bf071be3"))
-
-# Toggle between "gnews" and "newsapi"
-PROVIDER = os.getenv("NEWS_PROVIDER", "gnews").strip().lower()
+API_KEY = os.getenv("GNEWS_API_KEY", "579f5af84cb94a4dbd2e2d12bf071be3")
 
 # India-first default country
 DEFAULT_COUNTRY = os.getenv("NEWS_COUNTRY", "in").strip().lower()
@@ -35,11 +31,6 @@ DEFAULT_COUNTRY = os.getenv("NEWS_COUNTRY", "in").strip().lower()
 GNEWS_BASE_URL      = "https://gnews.io/api/v4"
 GNEWS_TOP_HEADLINES = f"{GNEWS_BASE_URL}/top-headlines"
 GNEWS_SEARCH        = f"{GNEWS_BASE_URL}/search"
-
-# NewsAPI endpoints (alternative)
-NEWSAPI_BASE_URL    = "https://newsapi.org/v2"
-NEWSAPI_HEADLINES   = f"{NEWSAPI_BASE_URL}/top-headlines"
-NEWSAPI_EVERYTHING  = f"{NEWSAPI_BASE_URL}/everything"
 
 # Request settings
 REQUEST_TIMEOUT = 10          # seconds
@@ -59,14 +50,6 @@ GNEWS_TOPICS = {
     "Entertainment": "entertainment",
 }
 
-NEWSAPI_CATEGORIES = {
-    "General": "general", "Technology": "technology",
-    "Sports":  "sports",  "Business":   "business",
-    "Science": "science", "Health":     "health",
-    "Entertainment": "entertainment",
-}
-
-
 # ─────────────────────────────────────────────
 # PART B – HTTP GET  (Primary)
 # ─────────────────────────────────────────────
@@ -82,15 +65,12 @@ def fetch_top_headlines(category: str = "Nation",
 
     Args:
         category: News category string (key of GNEWS_TOPICS).
-        country:  ISO country code (used by NewsAPI).
+        country:  ISO country code used by GNews.
 
     Returns:
         List of article dicts with keys: title, description, url, source, published_at.
     """
-    if PROVIDER == "gnews":
-        return _gnews_top_headlines(category, country)
-    else:
-        return _newsapi_top_headlines(category, country)
+    return _gnews_top_headlines(category, country)
 
 
 def search_news(query: str, category: str = "Nation",
@@ -110,10 +90,7 @@ def search_news(query: str, category: str = "Nation",
     if not query.strip():
         return fetch_top_headlines(category)
 
-    if PROVIDER == "gnews":
-        return _gnews_search(query, category, country)
-    else:
-        return _newsapi_search(query, country)
+    return _gnews_search(query, category, country)
 
 
 # ─────────────────────────────────────────────
@@ -228,47 +205,6 @@ def _parse_gnews(data: dict) -> list[dict]:
 # NEWSAPI PRIVATE HELPERS
 # ─────────────────────────────────────────────
 
-def _newsapi_top_headlines(category: str, country: str) -> list[dict]:
-    cat = NEWSAPI_CATEGORIES.get(category, "general")
-    params = {
-        "apiKey":   API_KEY,
-        "category": cat,
-        "country":  country,
-        "pageSize": MAX_RESULTS,
-    }
-    return _get_request(NEWSAPI_HEADLINES, params, _parse_newsapi)
-
-
-def _newsapi_search(query: str, country: str) -> list[dict]:
-    search_query = query.strip()
-    if country == "in" and "india" not in search_query.lower():
-        search_query = f"{search_query} India"
-
-    params = {
-        "apiKey":   API_KEY,
-        "q":        search_query,
-        "language": DEFAULT_LANG,
-        "pageSize": MAX_RESULTS,
-        "sortBy":   "publishedAt",
-    }
-    return _get_request(NEWSAPI_EVERYTHING, params, _parse_newsapi)
-
-
-def _parse_newsapi(data: dict) -> list[dict]:
-    """Normalises NewsAPI JSON to a flat list of article dicts."""
-    articles = []
-    for item in data.get("articles", []):
-        articles.append({
-            "title":        item.get("title") or "No Title",
-            "description":  item.get("description") or "No description available.",
-            "url":          item.get("url", ""),
-            "source":       (item.get("source") or {}).get("name", "Unknown"),
-            "published_at": item.get("publishedAt", ""),
-            "image":        item.get("urlToImage", ""),
-        })
-    return articles
-
-
 # ─────────────────────────────────────────────
 # CORE HTTP GET UTILITY
 # ─────────────────────────────────────────────
@@ -366,9 +302,8 @@ def get_demo_articles(category: str = "Nation") -> list[dict]:
         },
         {
             "title":        "[DEMO] How to set your API key",
-            "description":  "Edit api_handler.py and replace "
-                            "YOUR_GNEWS_API_KEY_HERE with your free GNews key "
-                            "from https://gnews.io",
+            "description":  "Set the GNEWS_API_KEY environment variable with "
+                            "your free GNews key from https://gnews.io.",
             "url":          "https://gnews.io",
             "source":       "Setup Guide",
             "published_at": "2025-01-01T02:00:00Z",
